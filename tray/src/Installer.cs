@@ -12,7 +12,7 @@ namespace FbtCal
 {
     // The installer is this same exe: started as "fbtcalSetup.exe" (or with --setup) it copies itself
     // per user to %LOCALAPPDATA%\Programs\fbtcal together with what it carries (the SteamVR driver,
-    // openvr_api.dll, fbtcal.vrmanifest), adds a Start menu shortcut and an "Apps" entry, and starts the
+    // openvr_api.dll, fbtcal.vrmanifest), adds Start menu and desktop shortcuts and an "Apps" entry, and starts the
     // installed copy, which registers its driver and the start with SteamVR itself (Setup.cs).
     // "fbtcal.exe --uninstall" takes it all out again; the settings in %APPDATA%\fbtcal stay.
     // Orbit's installer is the model (one exe, per user, only its own files deleted).
@@ -25,6 +25,7 @@ namespace FbtCal
         public static string DefaultDir => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "fbtcal");
         static string StartMenuLink => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "fbtcal.lnk");
+        static string DesktopLink => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "fbtcal.lnk");
         public static string Version => typeof(Installer).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
         // What the setup exe carries besides itself (embedded by build_setup.ps1: -p:FbtcalPayload=true).
@@ -37,6 +38,7 @@ namespace FbtCal
         {
             public string Dir = DefaultDir;
             public bool Shortcuts = true;   // Start menu + Apps entry (tests: --no-shortcuts)
+            public bool DesktopShortcut = true;  // the setup window's checkbox (--no-shortcuts: none either)
             public bool Start = true;       // start the installed copy (tests: --no-start)
             public bool StopRunning = true; // close a running fbtcal first (tests: --no-stop)
             public bool SteamVR = true;     // uninstall: take the driver and the auto-start out (tests: --keep-steamvr)
@@ -54,6 +56,10 @@ namespace FbtCal
                 };
                 int i = Array.IndexOf(args, "--install-dir");
                 if (i >= 0 && i + 1 < args.Length) o.Dir = Path.GetFullPath(args[i + 1]);
+                // on by default for a new install; an update keeps it only if the shortcut is still there
+                // (whoever deleted it from the desktop doesn't get it back with every update)
+                o.DesktopShortcut = o.Shortcuts && !args.Contains("--no-desktop-shortcut") &&
+                                    (InstalledVersion() == null || HasDesktopLink(Path.Combine(o.Dir, ExeName)));
                 return o;
             }
         }
@@ -103,7 +109,7 @@ namespace FbtCal
         {
             if (!HasPayload) throw new InvalidOperationException("this build carries no driver (build it with build_setup.ps1)");
             if (DriverInUse(o.Dir)) throw new InvalidOperationException("Close SteamVR first: it has fbtcal's driver loaded.");
-            Log.Info($"setup {Version}: install into {o.Dir} (shortcuts {o.Shortcuts}, start {o.Start})");
+            Log.Info($"setup {Version}: install into {o.Dir} (shortcuts {o.Shortcuts}, desktop {o.DesktopShortcut}, start {o.Start})");
             if (o.StopRunning) StopRunning();
             Directory.CreateDirectory(o.Dir);
             // the files first: if one can't be written, the old exe still goes with the old files
@@ -138,6 +144,9 @@ namespace FbtCal
                 k.SetValue("NoRepair", 1, RegistryValueKind.DWord);
                 k.SetValue("EstimatedSize", (int)(new FileInfo(exe).Length / 1024), RegistryValueKind.DWord);
             }
+            if (o.DesktopShortcut) MakeShortcut(DesktopLink, exe, o.Dir);
+            else if (HasDesktopLink(exe))  // unticked on an update: take ours away, never anyone else's fbtcal.lnk
+                try { File.Delete(DesktopLink); } catch (Exception ex) { Log.Warn($"setup: delete {DesktopLink}: {ex.Message}"); }
             Log.Info("setup: installed");
             if (o.Start)
                 Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = o.Dir, UseShellExecute = true });
@@ -178,8 +187,9 @@ namespace FbtCal
             }
             if (o.Shortcuts)
             {
-                if (LinkTarget(StartMenuLink) is string target && Setup.SamePath(target, exe))
-                    try { File.Delete(StartMenuLink); } catch (Exception) { }
+                foreach (string link in new[] { StartMenuLink, DesktopLink })
+                    if (LinkTarget(link) is string target && Setup.SamePath(target, exe))
+                        try { File.Delete(link); } catch (Exception) { }
                 try { Registry.CurrentUser.DeleteSubKeyTree(UninstallKey, false); } catch (Exception) { }
             }
 
@@ -263,5 +273,7 @@ namespace FbtCal
             }
             catch (Exception) { return null; }
         }
+
+        static bool HasDesktopLink(string exe) => LinkTarget(DesktopLink) is string target && Setup.SamePath(target, exe);
     }
 }
