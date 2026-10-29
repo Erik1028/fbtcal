@@ -62,11 +62,14 @@ namespace FbtCal
         record struct Btn(RectangleF Rect, PanelAction Action, string Title, string Sub, Kind Kind, Chev Chev = Chev.None, bool Center = false);
 
         static readonly Bitmap MeasureBmp = new Bitmap(1, 1);
+        // The VR thread (the tab) and the UI thread (the desktop window) both draw: GDI+ objects such as
+        // the shared fonts and the app icon must not be used by two threads at once.
+        static readonly object Gdi = new object();
 
         // Where the buttons are (the laser's hit test): the same layout pass, without painting.
         static List<Btn> Buttons(PanelModel m)
         {
-            lock (MeasureBmp)
+            lock (Gdi)
             {
                 using var g = Graphics.FromImage(MeasureBmp);
                 var cv = new Canvas(g, paint: false);
@@ -82,7 +85,22 @@ namespace FbtCal
             return bmp;
         }
 
+        // The desktop window (MainWindow.cs): the same picture, scaled to the window, and its mouse.
+        public static void Paint(Graphics g, PanelModel m, PanelAction hover, PanelAction pressed) => Draw(g, m, hover, pressed);
+
+        public static PanelAction HitAt(PanelModel m, float x, float y)
+        {
+            foreach (var b in Buttons(m))
+                if (b.Kind != Kind.Disabled && b.Rect.Contains(x, y)) return b.Action;
+            return PanelAction.None;
+        }
+
         static void Draw(Graphics g, PanelModel m, PanelAction hover, PanelAction pressed)
+        {
+            lock (Gdi) DrawLocked(g, m, hover, pressed);
+        }
+
+        static void DrawLocked(Graphics g, PanelModel m, PanelAction hover, PanelAction pressed)
         {
             g.SmoothingMode = SmoothingMode.AntiAlias;
             g.TextRenderingHint = TextRenderingHint.AntiAliasGridFit;  // no ClearType fringes in the headset
@@ -107,7 +125,8 @@ namespace FbtCal
             if (m.CountdownS >= 0) return Screen.Countdown;
             if (m.State == WorkerState.Capturing) return Screen.Holding;
             if (m.State == WorkerState.Calibrating) return Screen.Calibrating;
-            if (m.SettingsPage && m.PoseTitle.Length > 0 && (m.State == WorkerState.Watching || m.TestLeftS >= 0)) return Screen.Settings;
+            if (m.SettingsPage && m.PoseTitle.Length > 0 &&
+                (m.State == WorkerState.Watching || m.State == WorkerState.WaitingForSteamVR || m.TestLeftS >= 0)) return Screen.Settings;
             if (m.TestLeftS >= 0) return Screen.Test;
             if (m.State == WorkerState.WaitingForSteamVR) return Screen.Waiting;
             return ProblemsOf(m).Count > 0 ? Screen.Problems : Screen.Main;
@@ -155,7 +174,7 @@ namespace FbtCal
             else
             {
                 cv.Image(AppIcon, 26, 10, 52, 52);
-                cv.Text("fbtcal", 88, 47, 31, Tx, Wt.Semibold);
+                cv.Text("FBTcal", 88, 47, 31, Tx, Wt.Semibold);
             }
             float wx = 992 - cv.Measure(state, 27, Wt.Regular);
             cv.Text(state, 992, 47, 27, lamp == Lamp.Problem ? Amber : Tx, Wt.Regular, Align.Right);
@@ -262,8 +281,11 @@ namespace FbtCal
             }
         }
 
+        // from the desktop window there is the headset to put on first
+        static int CaptureDelay(PanelModel m) => m.OnDesktop ? VrWorker.CaptureDelayS : VrWorker.CapturePanelDelayS;
+
         static string CaptureSub(PanelModel m) =>
-            m.Source == PoseSource.Capture && m.PoseTitle.Length > 0 ? $"replaces the {m.PoseTitle.Split(',')[0]} pose" : $"starts in {VrWorker.CapturePanelDelayS} s";
+            m.Source == PoseSource.Capture && m.PoseTitle.Length > 0 ? $"replaces the {m.PoseTitle.Split(',')[0]} pose" : $"starts in {CaptureDelay(m)} s";
 
         static void BottomRow(Canvas cv, PanelModel m, Kind capture, Kind test, Kind settings, string captureSub = null)
         {
@@ -287,7 +309,7 @@ namespace FbtCal
                 {
                     Prob.Driver => Block(cv, C0, y, "SteamVR driver NOT loaded", (x, by) =>
                     {
-                        float yy = cv.Para("Without it, fbtcal can’t move your trackers.", x, by, 25, 620, Tx);
+                        float yy = cv.Para("Without it, FBTcal can’t move your trackers.", x, by, 25, 620, Tx);
                         return Steps(cv, x, yy + 52, new[] { "SteamVR Settings › Startup / Shutdown", "Manage Add-ons › fbtcal: On", "Restart SteamVR" }, 25, 620, 46) + 14;
                     }),
                     Prob.Trackers => TrackersBlock(cv, m, y),
@@ -311,7 +333,7 @@ namespace FbtCal
             if (probs[0] == Prob.Driver)
                 BottomRow(cv, m, Kind.Disabled, Kind.Disabled, Kind.Secondary, "needs the driver");
             else if (probs[0] == Prob.NoPose || probs[0] == Prob.NoSlimeVr)
-                BottomRow(cv, m, Kind.Primary, Kind.Disabled, Kind.Disabled, $"starts in {VrWorker.CapturePanelDelayS} s");
+                BottomRow(cv, m, Kind.Primary, Kind.Disabled, Kind.Disabled, $"starts in {CaptureDelay(m)} s");
             else
                 BottomRow(cv, m, Kind.Secondary, Kind.Secondary, Kind.Secondary);
         }
@@ -328,7 +350,7 @@ namespace FbtCal
         // The fix as numbered steps; step 2 is the launch option in its own field, with Copy.
         static float IkBody(Canvas cv, float x, float y, bool lead)
         {
-            if (lead) y = cv.Para("fbtcal can’t see when VRChat starts calibrating.", x, y, 25, 620, Tx) + 52;
+            if (lead) y = cv.Para("FBTcal can’t see when VRChat starts calibrating.", x, y, 25, 620, Tx) + 52;
             cv.Text("1", x, y, 25, Tx3);
             cv.Text("Steam › VRChat › Properties › Launch options", x + 36, y, 25, Tx);
             float top = y + 22;
@@ -384,11 +406,11 @@ namespace FbtCal
 
         static void SettingsScreen(Canvas cv, PanelModel m)
         {
-            bool testing = m.TestLeftS >= 0;
-            Header(cv, m, testing ? "Test" : m.StateText, testing ? Lamp.Active : Lamp.Ok, page: "Pose settings");
+            bool testing = m.TestLeftS >= 0, waiting = m.State == WorkerState.WaitingForSteamVR;  // (the desktop window works without SteamVR)
+            Header(cv, m, testing ? "Test" : m.StateText, testing ? Lamp.Active : waiting ? Lamp.Wait : Lamp.Ok, page: "Pose settings");
             const float s = 2.55f, hy = 122;
             float feetY = hy + 157 * s, capY = feetY + 34;
-            Figure(cv, m.Pose, s, hy, fx: 104, sx: null, testing ? Dots.Held : Dots.Live, floor: (40, 168), captionY: capY, sideCaption: false);
+            Figure(cv, m.Pose, s, hy, fx: 104, sx: null, testing ? Dots.Held : waiting ? Dots.Off : Dots.Live, floor: (40, 168), captionY: capY, sideCaption: false);
             FromAbove(cv, 316, feetY - 46, 4.6f, (m.StanceCm, m.ToeOutDeg, m.ForwardCm), (m.BaseStanceCm, m.BaseToeOutDeg, 0), arrowTop: 128);
             cv.Text("Feet from above", 316, capY, 20, Tx3, Wt.Regular, Align.Center);
             // legend
@@ -434,7 +456,8 @@ namespace FbtCal
             }
             cv.Buttons.Add(testing
                 ? new Btn(new RectangleF(x0, BottomY, 992 - x0, BottomH), PanelAction.Cancel, "Stop", $"{m.TestLeftS} s left – back to your real movement", Kind.Secondary)
-                : new Btn(new RectangleF(x0, BottomY, 992 - x0, BottomH), PanelAction.Test, "Test", "ideal pose for 20 s – you can adjust meanwhile", Kind.Secondary));
+                : new Btn(new RectangleF(x0, BottomY, 992 - x0, BottomH), PanelAction.Test, "Test",
+                          waiting ? "needs SteamVR" : "ideal pose for 20 s – you can adjust meanwhile", waiting ? Kind.Disabled : Kind.Secondary));
         }
 
         // The feet seen from above, forward = up, oy = the floor point under the headset: what the
@@ -741,6 +764,19 @@ namespace FbtCal
             public void Button(Btn b, bool hover, bool pressed)
             {
                 var r = b.Rect;
+                if (b.Kind == Kind.CheckOn || b.Kind == Kind.CheckOff)
+                {
+                    // a setting, not an action: no button box around it; the square answers the laser
+                    float bx = r.X, by = r.Y + r.Height / 2 - 13;
+                    if (b.Kind == Kind.CheckOn)
+                    {
+                        Fill(bx, by, 26, 26, hover || pressed ? C(0xBC6CF0) : Acc, 5);
+                        Poly(new[] { new PointF(bx + 6, by + 13.5f), new PointF(bx + 11, by + 18.5f), new PointF(bx + 20, by + 8) }, Bg, 3.4f);
+                    }
+                    else Stroke(new RectangleF(bx, by, 26, 26), 5, hover || pressed ? Acc : Tx2, 2);
+                    Text(b.Title, bx + 40, r.Y + r.Height / 2 + 0.355f * 24, 24, Tx);
+                    return;
+                }
                 Color title, sub;
                 switch (b.Kind)
                 {
@@ -769,18 +805,6 @@ namespace FbtCal
                     float cx = r.X + r.Width / 2, cy = r.Y + r.Height / 2;
                     Line(cx - 14, cy, cx + 14, cy, Tx, 3.2f);
                     if (b.Kind == Kind.Plus) Line(cx, cy - 14, cx, cy + 14, Tx, 3.2f);
-                    return;
-                }
-                if (b.Kind == Kind.CheckOn || b.Kind == Kind.CheckOff)
-                {
-                    float bx = r.X + 20, by = r.Y + r.Height / 2 - 13;
-                    if (b.Kind == Kind.CheckOn)
-                    {
-                        Fill(bx, by, 26, 26, Acc, 5);
-                        Poly(new[] { new PointF(bx + 6, by + 13.5f), new PointF(bx + 11, by + 18.5f), new PointF(bx + 20, by + 8) }, Bg, 3.4f);
-                    }
-                    else Stroke(new RectangleF(bx, by, 26, 26), 5, Tx2, 2);
-                    Text(b.Title, bx + 42, r.Y + r.Height / 2 + 0.355f * 24, 24, Tx);
                     return;
                 }
                 float pad = 22;

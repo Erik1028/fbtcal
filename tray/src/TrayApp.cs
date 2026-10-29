@@ -2,11 +2,14 @@ using System;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace FbtCal
 {
-    // The whole UI: a tray icon (colour = state) and its menu.
+    // The desktop side: a tray icon (colour = state), its menu, and the window with the SteamVR tab's
+    // picture (MainWindow.cs).
     sealed class TrayApp : ApplicationContext
     {
         readonly NotifyIcon _tray;
@@ -19,10 +22,29 @@ namespace FbtCal
         readonly Icon _iconWaiting = Res.TrayIcon("tray-waiting.ico");
         public const string Website = "https://erik1028.github.io/fbtcal/";
         const long StrayClickMs = 600;
+        // A second start with --show (the shortcuts) asks the running copy for its window.
+        const string ShowEventName = @"Local\fbtcal_show_window";
+        readonly EventWaitHandle _showEvent = new EventWaitHandle(false, EventResetMode.AutoReset, ShowEventName);
+        readonly RegisteredWaitHandle _showWait;
+        MainWindow _window;
         long _menuOpenedAt;
         bool _quitting;
 
-        public TrayApp(string startupNote)
+        [DllImport("user32.dll")] static extern bool AllowSetForegroundWindow(int processId);
+
+        public static void SignalShow()
+        {
+            AllowSetForegroundWindow(-1);  // ASFW_ANY: the running copy may bring its window to the front
+            try
+            {
+                using var e = EventWaitHandle.OpenExisting(ShowEventName);
+                e.Set();
+            }
+            catch (WaitHandleCannotBeOpenedException) { }  // an older copy without a window
+        }
+
+        // preview: no tray icon, no worker (fbtcal.exe --render-menu, RenderMenu)
+        public TrayApp(string startupNote, bool showWindow, bool preview = false)
         {
             _ui = new Control();
             _ui.CreateControl();
@@ -45,7 +67,12 @@ namespace FbtCal
             var source = new ToolStripMenuItem("Standing pose from");
             source.DropDownItems.Add(_sourceCapture);
             source.DropDownItems.Add(_sourceSlimeVr);
-            var menu = new ContextMenuStrip();
+            var open = new ToolStripMenuItem("Open FBTcal", null, Guarded("open", ShowWindow));
+            open.Font = new Font(open.Font, FontStyle.Bold);  // what a click on the icon does
+            var menu = new ContextMenuStrip { Renderer = new TrayMenuRenderer() };
+            source.DropDown.Renderer = menu.Renderer;
+            menu.Items.Add(open);
+            menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(_status);
             menu.Items.Add(_profile);
             menu.Items.Add(_saveAnyway);
@@ -57,9 +84,10 @@ namespace FbtCal
             menu.Items.Add(source);
             menu.Items.Add(new ToolStripSeparator());
             menu.Items.Add(_autostart);
-            menu.Items.Add("Open the log", null, Guarded("log", OpenLog));
-            menu.Items.Add($"Website and help (fbtcal {Application.ProductVersion.Split('+')[0]})", null, Guarded("website", () =>
+            menu.Items.Add(new ToolStripSeparator());
+            menu.Items.Add($"Website and help (FBTcal {Application.ProductVersion.Split('+')[0]})", null, Guarded("website", () =>
                 Process.Start(new ProcessStartInfo(Website) { UseShellExecute = true })));
+            menu.Items.Add("Open the log", null, Guarded("log", OpenLog));
             menu.Items.Add("Quit…", null, Guarded("quit", ConfirmQuit));
             menu.Opening += (s, e) =>
             {
@@ -69,7 +97,11 @@ namespace FbtCal
                 _autostart.Checked = Settings.AutoStart;  // (the SteamVR panel can switch it too)
             };
 
-            _tray = new NotifyIcon { Icon = _iconWaiting, Text = "fbtcal", ContextMenuStrip = menu, Visible = true };
+            _tray = new NotifyIcon { Icon = _iconWaiting, Text = "FBTcal", ContextMenuStrip = menu, Visible = !preview };
+            _tray.MouseClick += (s, e) =>
+            {
+                if (e.Button == MouseButtons.Left) ShowWindow();
+            };
             RefreshProfileLine();
 
             _worker.StateChanged += (st, text) => OnUi(() => ShowState(st, text));
@@ -81,7 +113,32 @@ namespace FbtCal
             });
             _worker.SteamVRQuit += () => OnUi(() => Quit("SteamVR quit"));
             if (!string.IsNullOrEmpty(startupNote)) Balloon(startupNote, false);
+            if (preview) return;
+            _showWait = ThreadPool.RegisterWaitForSingleObject(_showEvent, (s, timedOut) => OnUi(ShowWindow), null, -1, false);
             _worker.Start();
+            if (showWindow) ShowWindow();
+        }
+
+        // The menu as a picture, laid out but never shown (a shown one would pop up on the screen).
+        public void RenderMenu(string png)
+        {
+            ShowState(WorkerState.Watching, "Ready");
+            var menu = _tray.ContextMenuStrip;
+            menu.CreateControl();
+            menu.Size = menu.GetPreferredSize(Size.Empty);
+            menu.PerformLayout();
+            using var bmp = new Bitmap(menu.Width, menu.Height);
+            menu.DrawToBitmap(bmp, new Rectangle(Point.Empty, menu.Size));
+            bmp.Save(png, System.Drawing.Imaging.ImageFormat.Png);
+            _tray.Dispose();
+            _showEvent.Dispose();
+        }
+
+        void ShowWindow()
+        {
+            if (_quitting) return;
+            if (_window == null || _window.IsDisposed) _window = new MainWindow(_worker);
+            _window.ShowFront();
         }
 
         void OnUi(Action a)
@@ -110,9 +167,9 @@ namespace FbtCal
 
         void ConfirmQuit()
         {
-            if (MessageBox.Show("Quit fbtcal? While it is not running, it can't help with VRChat calibration.\n" +
+            if (MessageBox.Show("Quit FBTcal? While it is not running, it can't help with VRChat calibration.\n" +
                                 "It starts again by itself the next time SteamVR starts.",
-                                "fbtcal", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
+                                "FBTcal", MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2) == DialogResult.Yes)
                 Quit("menu");
             else
                 Log.Info("quit cancelled");
@@ -121,7 +178,7 @@ namespace FbtCal
         void ShowState(WorkerState st, string text)
         {
             _status.Text = text;
-            string tip = "fbtcal: " + text;
+            string tip = "FBTcal: " + text;
             _tray.Text = tip.Length > 127 ? tip.Substring(0, 127) : tip;
             _tray.Icon = st switch
             {
@@ -132,7 +189,7 @@ namespace FbtCal
         }
 
         void Balloon(string text, bool warn) =>
-            _tray.ShowBalloonTip(8000, "fbtcal", text, warn ? ToolTipIcon.Warning : ToolTipIcon.Info);
+            _tray.ShowBalloonTip(8000, "FBTcal", text, warn ? ToolTipIcon.Warning : ToolTipIcon.Info);
 
         void RefreshProfileLine()
         {
@@ -161,6 +218,14 @@ namespace FbtCal
             _quitting = true;
             Log.Info($"quit requested: {why}");
             _worker.Stop();
+            _showWait?.Unregister(null);
+            _showEvent.Dispose();
+            if (_window != null)
+            {
+                _window.Quitting = true;
+                _window.Close();
+                _window.Dispose();
+            }
             _tray.Visible = false;
             _tray.Dispose();
             ExitThread();

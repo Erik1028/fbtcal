@@ -1,6 +1,6 @@
-"""fbtcal - VRChat FBT calibration without posing (SlimeVR).
+"""FBTcal - VRChat FBT calibration without posing (SlimeVR).
 
-While VRChat calibrates, the fbtcal SteamVR driver shows the trackers in the pose they
+While VRChat calibrates, the FBTcal SteamVR driver shows the trackers in the pose they
 would have if you stood straight under your headset. So you can calibrate sitting or
 lying down, and VRChat still gets clean offsets.
 
@@ -335,7 +335,7 @@ def override_loop(vr, profile, writer, until):
 
 def open_writer():
     if not shm.mapping_exists():
-        print("WARNING: the fbtcal driver is not loaded in SteamVR, so the trackers won't move.\n"
+        print("WARNING: the FBTcal driver is not loaded in SteamVR, so the trackers won't move.\n"
               "  Check: SteamVR Settings > Startup / Shutdown > Manage Add-ons > fbtcal = On,\n"
               "  then restart SteamVR.")
     return shm.OverrideWriter()

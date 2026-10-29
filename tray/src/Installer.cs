@@ -24,8 +24,8 @@ namespace FbtCal
 
         public static string DefaultDir => Path.Combine(
             Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Programs", "fbtcal");
-        static string StartMenuLink => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "fbtcal.lnk");
-        static string DesktopLink => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "fbtcal.lnk");
+        static string StartMenuLink => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Programs), "FBTcal.lnk");
+        static string DesktopLink => Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.DesktopDirectory), "FBTcal.lnk");
         public static string Version => typeof(Installer).Assembly.GetName().Version?.ToString(3) ?? "1.0.0";
 
         // What the setup exe carries besides itself (embedded by build_setup.ps1: -p:FbtcalPayload=true).
@@ -108,7 +108,7 @@ namespace FbtCal
         public static void Install(Options o)
         {
             if (!HasPayload) throw new InvalidOperationException("this build carries no driver (build it with build_setup.ps1)");
-            if (DriverInUse(o.Dir)) throw new InvalidOperationException("Close SteamVR first: it has fbtcal's driver loaded.");
+            if (DriverInUse(o.Dir)) throw new InvalidOperationException("Close SteamVR first: it has FBTcal's driver loaded.");
             Log.Info($"setup {Version}: install into {o.Dir} (shortcuts {o.Shortcuts}, desktop {o.DesktopShortcut}, start {o.Start})");
             if (o.StopRunning) StopRunning();
             Directory.CreateDirectory(o.Dir);
@@ -132,7 +132,7 @@ namespace FbtCal
             {
                 MakeShortcut(StartMenuLink, exe, o.Dir);
                 using var k = Registry.CurrentUser.CreateSubKey(UninstallKey);
-                k.SetValue("DisplayName", "fbtcal");
+                k.SetValue("DisplayName", "FBTcal");
                 k.SetValue("DisplayVersion", Version);
                 k.SetValue("Publisher", "Erik1028");
                 k.SetValue("DisplayIcon", exe + ",0");
@@ -148,8 +148,8 @@ namespace FbtCal
             else if (HasDesktopLink(exe))  // unticked on an update: take ours away, never anyone else's fbtcal.lnk
                 try { File.Delete(DesktopLink); } catch (Exception ex) { Log.Warn($"setup: delete {DesktopLink}: {ex.Message}"); }
             Log.Info("setup: installed");
-            if (o.Start)
-                Process.Start(new ProcessStartInfo(exe) { WorkingDirectory = o.Dir, UseShellExecute = true });
+            if (o.Start)  // with its window, so there is something to see (a quiet install: just the tray)
+                Process.Start(new ProcessStartInfo(exe) { Arguments = o.Quiet ? "" : "--show", WorkingDirectory = o.Dir, UseShellExecute = true });
         }
 
         // ---------------- uninstall ----------------
@@ -170,9 +170,9 @@ namespace FbtCal
             // entry with it. Without an entry, the default folder still counts as installed; any other
             // folder only gets its own SteamVR registration removed, no files deleted.
             if (registeredDir != null && !Setup.SamePath(registeredDir, dir))
-                return $"This is not the installed copy (fbtcal is installed in {registeredDir}). Uninstall it from Windows Settings > Apps.";
+                return $"This is not the installed copy (FBTcal is installed in {registeredDir}). Uninstall it from Windows Settings > Apps.";
             bool installedCopy = registeredDir != null || Setup.SamePath(dir, DefaultDir);
-            if (o.SteamVR && SteamVRRunning()) return "Close SteamVR first: it has fbtcal's driver loaded.";
+            if (o.SteamVR && SteamVRRunning()) return "Close SteamVR first: it has FBTcal's driver loaded.";
             if (o.StopRunning) StopRunning();
 
             if (o.SteamVR)
@@ -253,11 +253,15 @@ namespace FbtCal
             try
             {
                 dynamic sh = Activator.CreateInstance(Type.GetTypeFromProgID("WScript.Shell", true));
+                // Saving over an existing file keeps its old spelling (1.0.1's "fbtcal.lnk"), and the
+                // file name is the label people see: a fresh file gets "FBTcal".
+                if (File.Exists(path)) File.Delete(path);
                 dynamic lnk = sh.CreateShortcut(path);
                 lnk.TargetPath = target;
+                lnk.Arguments = "--show";  // opens the window (also when FBTcal already runs in the tray)
                 lnk.WorkingDirectory = workDir;
                 lnk.IconLocation = target + ",0";
-                lnk.Description = "fbtcal - VRChat FBT calibration without posing";
+                lnk.Description = "FBTcal - VRChat FBT calibration without posing";
                 lnk.Save();
             }
             catch (Exception e) { Log.Warn($"setup: shortcut {path}: {e.Message}"); }

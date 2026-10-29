@@ -39,7 +39,7 @@ namespace FbtCal
         const int CaptureHz = 90;
         const double StandingMaxSidewaysM = 0.30;  // same checks as app/fbtcal.py capture
         const double StandingMinDropM = 0.15;
-        const string Watching = "Watching";
+        const string Watching = "Ready";  // (watching the VRChat log: calibrate whenever you like)
         const double StanceStepCm = 2, StanceMinCm = 10, StanceMaxCm = 60;
         const double ToeStepDeg = 3, ToeMinDeg = -15, ToeMaxDeg = 45;
         const double ForwardStepCm = 2, ForwardMaxCm = 20;
@@ -53,6 +53,8 @@ namespace FbtCal
         public event Action<string> CopyText;                   // for the clipboard (the UI thread puts it there)
 
         readonly ConcurrentQueue<string> _requests = new ConcurrentQueue<string>();
+        readonly ConcurrentQueue<PanelAction> _windowActions = new ConcurrentQueue<PanelAction>();  // clicks in the desktop window
+        volatile PanelModel _latest;  // what the tab shows, for the desktop window
         readonly TrackedDevicePose_t[] _poses = new TrackedDevicePose_t[OpenVR.k_unMaxTrackedDeviceCount];
         volatile bool _stop, _cancel;
         volatile CaptureResult _pending;  // a capture with problems, waiting for "save anyway" / "discard"
@@ -97,6 +99,8 @@ namespace FbtCal
         public void RequestAutoStart() => _requests.Enqueue("autostart");
         public bool HasPendingCapture => _pending != null;
         public void ResolveCapture(bool save) => _requests.Enqueue(save ? "save" : "discard");
+        public void PostAction(PanelAction a) => _windowActions.Enqueue(a);  // (UI thread)
+        public PanelModel LatestModel => _latest;                            // null until the worker's first pump
 
         void SetState(WorkerState s, string text)
         {
@@ -122,7 +126,11 @@ namespace FbtCal
                     if (!Connect())
                     {
                         SetState(WorkerState.WaitingForSteamVR, "Waiting for SteamVR");
-                        for (int i = 0; i < 30 && !_stop; i++) Thread.Sleep(100);
+                        for (int i = 0; i < 30 && !_stop; i++)
+                        {
+                            PumpUi();  // the desktop window works without SteamVR
+                            Thread.Sleep(100);
+                        }
                         continue;
                     }
                     bool quit = Session();
@@ -183,16 +191,16 @@ namespace FbtCal
                 bool registered = Setup.EnsureDriverRegistered(out string reg);
                 Log.Info(reg);
                 Notify?.Invoke(registered
-                    ? "fbtcal's SteamVR driver is set up now: restart SteamVR once."
-                    : "The fbtcal driver is not loaded, so the trackers won't move. SteamVR Settings > " +
+                    ? "FBTcal's SteamVR driver is set up now: restart SteamVR once."
+                    : "The FBTcal driver is not loaded, so the trackers won't move. SteamVR Settings > " +
                       "Startup / Shutdown > Manage Add-ons > fbtcal: On, then restart SteamVR.", true);
             }
             if (LoadProfile(out var source, out string problem) == null)
             {
                 Log.Warn("no standing pose: " + problem);
                 Notify?.Invoke(source == PoseSource.SlimeVr
-                    ? problem + " Capture a standing pose: SteamVR menu > fbtcal tab, or right-click the tray icon > Capture standing pose."
-                    : "No standing pose captured yet. SteamVR menu > fbtcal tab, or right-click the tray icon > Capture standing pose.", true);
+                    ? problem + " Capture a standing pose: SteamVR menu > FBTcal tab, or right-click the tray icon > Capture standing pose."
+                    : "No standing pose captured yet. SteamVR menu > FBTcal tab, or right-click the tray icon > Capture standing pose.", true);
             }
             _cachesStale = true;
             return true;
@@ -245,87 +253,95 @@ namespace FbtCal
 
         // ------------------------------------------------------------ dashboard panel
 
+        // The tab's laser and the desktop window's mouse, then the picture for both.
         void PumpUi(bool force = false)
         {
-            if (_panel == null) return;
             long now = Environment.TickCount64;
             if (!force && now - _lastUi < UiPumpMs) return;
             _lastUi = now;
-            var ov = OpenVR.Overlay;
-            var action = _panel.Pump(ov);
-            if (action != PanelAction.None)
-            {
-                Log.Info("panel: " + action);
-                switch (action)
-                {
-                    case PanelAction.Capture: RequestCapture(CapturePanelDelayS); break;
-                    case PanelAction.Test: RequestTest(); break;
-                    case PanelAction.Cancel: _cancel = true; break;
-                    case PanelAction.SaveAnyway: ResolveCapture(true); break;
-                    case PanelAction.Discard: ResolveCapture(false); break;
-                    case PanelAction.ToggleAutoStart:
-                        Settings.AutoStart = !Settings.AutoStart;
-                        Log.Info(Setup.ApplyAutoStart(Settings.AutoStart));
-                        _cachesStale = true;
-                        break;
-                    case PanelAction.StanceMinus:
-                    case PanelAction.StancePlus:
-                        double from = _stanceCm ?? Math.Round(_baseStanceCm);
-                        if (double.IsNaN(from)) break;
-                        double to = Math.Clamp(Math.Round(from) + (action == PanelAction.StancePlus ? StanceStepCm : -StanceStepCm), StanceMinCm, StanceMaxCm);
-                        Settings.StanceCm = to;
-                        Log.Info($"stance {from:0} -> {to:0} cm (pose's own {_baseStanceCm:0.0})");
-                        Adjusted();
-                        break;
-                    case PanelAction.StanceReset:
-                        Settings.StanceCm = null;
-                        Log.Info($"stance back to the pose's own {_baseStanceCm:0.0} cm");
-                        Adjusted();
-                        break;
-                    case PanelAction.ToeOutMinus:
-                    case PanelAction.ToeOutPlus:
-                        double toeFrom = _toeOutDeg ?? Math.Round(_baseToeOutDeg);
-                        if (double.IsNaN(toeFrom)) break;
-                        double toeTo = Math.Clamp(Math.Round(toeFrom) + (action == PanelAction.ToeOutPlus ? ToeStepDeg : -ToeStepDeg), ToeMinDeg, ToeMaxDeg);
-                        Settings.ToeOutDeg = toeTo;
-                        Log.Info($"toe-out {toeFrom:0} -> {toeTo:0} deg (pose's own {_baseToeOutDeg:0.0})");
-                        Adjusted();
-                        break;
-                    case PanelAction.ToeOutReset:
-                        Settings.ToeOutDeg = null;
-                        Log.Info($"toe-out back to the pose's own {_baseToeOutDeg:0.0} deg");
-                        Adjusted();
-                        break;
-                    case PanelAction.ForwardMinus:
-                    case PanelAction.ForwardPlus:
-                        double fwdFrom = _forwardCm ?? 0;
-                        double fwdTo = Math.Clamp(fwdFrom + (action == PanelAction.ForwardPlus ? ForwardStepCm : -ForwardStepCm), -ForwardMaxCm, ForwardMaxCm);
-                        Settings.FeetForwardCm = fwdTo == 0 ? null : fwdTo;
-                        Log.Info($"feet forward {fwdFrom:0} -> {fwdTo:0} cm");
-                        Adjusted();
-                        break;
-                    case PanelAction.ForwardReset:
-                        Settings.FeetForwardCm = null;
-                        Log.Info("feet forward back to 0");
-                        Adjusted();
-                        break;
-                    case PanelAction.CopyIkFlag:
-                        CopyText?.Invoke("--enable-ik-debug-logging");
-                        Toast("Copied. Paste it into VRChat's launch options.");
-                        break;
-                    case PanelAction.OpenSettings: _settingsPage = true; break;
-                    case PanelAction.CloseSettings: _settingsPage = false; break;
-                    case PanelAction.SourceCapture:
-                    case PanelAction.SourceSlimeVr:
-                        var source = action == PanelAction.SourceCapture ? PoseSource.Capture : PoseSource.SlimeVr;
-                        Settings.PoseSource = source;
-                        Log.Info($"pose source -> {source}");
-                        _cachesStale = true;
-                        break;
-                }
-            }
+            var ov = _panel != null ? OpenVR.Overlay : null;
+            if (_panel != null) Handle(_panel.Pump(ov), window: false);
+            while (_windowActions.TryDequeue(out var a)) Handle(a, window: true);
             RefreshCaches(now);
-            _panel.Render(ov, Model(now));
+            var model = Model(now);
+            _latest = model;
+            _panel?.Render(ov, model);
+        }
+
+        void Handle(PanelAction action, bool window)
+        {
+            if (action == PanelAction.None) return;
+            Log.Info((window ? "window: " : "panel: ") + action);
+            if (_vr == null && action is PanelAction.Capture or PanelAction.Test)
+                return;  // clicked just as SteamVR closed: no capture or test may start at the next connect
+            switch (action)
+            {
+                // from the desktop there is the headset to put on first
+                case PanelAction.Capture: RequestCapture(window ? CaptureDelayS : CapturePanelDelayS); break;
+                case PanelAction.Test: RequestTest(); break;
+                case PanelAction.Cancel: _cancel = true; break;
+                case PanelAction.SaveAnyway: ResolveCapture(true); break;
+                case PanelAction.Discard: ResolveCapture(false); break;
+                case PanelAction.ToggleAutoStart:
+                    Settings.AutoStart = !Settings.AutoStart;
+                    if (_vr != null) Log.Info(Setup.ApplyAutoStart(Settings.AutoStart));  // else at the next connect
+                    _cachesStale = true;
+                    break;
+                case PanelAction.StanceMinus:
+                case PanelAction.StancePlus:
+                    double from = _stanceCm ?? Math.Round(_baseStanceCm);
+                    if (double.IsNaN(from)) break;
+                    double to = Math.Clamp(Math.Round(from) + (action == PanelAction.StancePlus ? StanceStepCm : -StanceStepCm), StanceMinCm, StanceMaxCm);
+                    Settings.StanceCm = to;
+                    Log.Info($"stance {from:0} -> {to:0} cm (pose's own {_baseStanceCm:0.0})");
+                    Adjusted();
+                    break;
+                case PanelAction.StanceReset:
+                    Settings.StanceCm = null;
+                    Log.Info($"stance back to the pose's own {_baseStanceCm:0.0} cm");
+                    Adjusted();
+                    break;
+                case PanelAction.ToeOutMinus:
+                case PanelAction.ToeOutPlus:
+                    double toeFrom = _toeOutDeg ?? Math.Round(_baseToeOutDeg);
+                    if (double.IsNaN(toeFrom)) break;
+                    double toeTo = Math.Clamp(Math.Round(toeFrom) + (action == PanelAction.ToeOutPlus ? ToeStepDeg : -ToeStepDeg), ToeMinDeg, ToeMaxDeg);
+                    Settings.ToeOutDeg = toeTo;
+                    Log.Info($"toe-out {toeFrom:0} -> {toeTo:0} deg (pose's own {_baseToeOutDeg:0.0})");
+                    Adjusted();
+                    break;
+                case PanelAction.ToeOutReset:
+                    Settings.ToeOutDeg = null;
+                    Log.Info($"toe-out back to the pose's own {_baseToeOutDeg:0.0} deg");
+                    Adjusted();
+                    break;
+                case PanelAction.ForwardMinus:
+                case PanelAction.ForwardPlus:
+                    double fwdFrom = _forwardCm ?? 0;
+                    double fwdTo = Math.Clamp(fwdFrom + (action == PanelAction.ForwardPlus ? ForwardStepCm : -ForwardStepCm), -ForwardMaxCm, ForwardMaxCm);
+                    Settings.FeetForwardCm = fwdTo == 0 ? null : fwdTo;
+                    Log.Info($"feet forward {fwdFrom:0} -> {fwdTo:0} cm");
+                    Adjusted();
+                    break;
+                case PanelAction.ForwardReset:
+                    Settings.FeetForwardCm = null;
+                    Log.Info("feet forward back to 0");
+                    Adjusted();
+                    break;
+                case PanelAction.CopyIkFlag:
+                    CopyText?.Invoke("--enable-ik-debug-logging");
+                    Toast("Copied. Paste it into VRChat's launch options.");
+                    break;
+                case PanelAction.OpenSettings: _settingsPage = true; break;
+                case PanelAction.CloseSettings: _settingsPage = false; break;
+                case PanelAction.SourceCapture:
+                case PanelAction.SourceSlimeVr:
+                    var source = action == PanelAction.SourceCapture ? PoseSource.Capture : PoseSource.SlimeVr;
+                    Settings.PoseSource = source;
+                    Log.Info($"pose source -> {source}");
+                    _cachesStale = true;
+                    break;
+            }
         }
 
         void Adjusted()
@@ -365,7 +381,7 @@ namespace FbtCal
             }
             catch (Exception) { }
             _inProfile = _profile?.Trackers.Count ?? 0;
-            var present = Trackers();
+            var present = _vr != null ? Trackers() : new Dictionary<string, uint>();  // (the desktop window without SteamVR)
             _found = _profile == null ? 0 : present.Keys.Count(_profile.Trackers.ContainsKey);
             var missing = _profile == null ? new List<string>() : _profile.Trackers.Keys.Where(k => !present.ContainsKey(k)).ToList();
             if (_profile?.Source == PoseSource.SlimeVr && _found > 0)
@@ -443,12 +459,12 @@ namespace FbtCal
                 if (source == PoseSource.SlimeVr)
                 {
                     Toast("Can't read the SlimeVR proportions.");
-                    Notify?.Invoke(problem + " So I can't help this time. SteamVR menu > fbtcal tab: switch to the captured pose.", true);
+                    Notify?.Invoke(problem + " So I can't help this time. SteamVR menu > FBTcal tab: switch to the captured pose.", true);
                 }
                 else
                 {
                     Toast("Capture the standing pose first.");
-                    Notify?.Invoke("No standing pose captured, so I can't help this time. SteamVR menu > fbtcal tab > Capture standing pose.", true);
+                    Notify?.Invoke("No standing pose captured, so I can't help this time. SteamVR menu > FBTcal tab > Capture standing pose.", true);
                 }
                 return true;
             }
@@ -636,7 +652,7 @@ namespace FbtCal
             {
                 _pending = result;
                 Sound.Problem();
-                Notify?.Invoke("Problem with the capture, not saved. Decide: SteamVR menu > fbtcal tab, " +
+                Notify?.Invoke("Problem with the capture, not saved. Decide: SteamVR menu > FBTcal tab, " +
                                "or right-click the tray icon (Save anyway / Discard).", true);
             }
             return true;

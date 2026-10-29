@@ -21,6 +21,12 @@ namespace FbtCal
                 RenderPanelPreviews(args[1]);  // to look at the SteamVR panel without a headset
                 return;
             }
+            if (args.Length == 2 && args[0] == "--render-menu")  // the tray menu as PNG (checks)
+            {
+                Application.SetHighDpiMode(HighDpiMode.SystemAware);
+                new TrayApp(null, showWindow: false, preview: true).RenderMenu(args[1]);
+                return;
+            }
             if (args.Length == 2 && args[0] == "--render-setup")  // the installer's window as PNG (website, checks)
             {
                 Application.SetHighDpiMode(HighDpiMode.SystemAware);
@@ -60,8 +66,14 @@ namespace FbtCal
             }
 
             // SteamVR's auto-launch and a manual start must not run two copies.
+            // --show (the shortcuts, the installer) opens the window; SteamVR's auto-launch starts without it.
+            bool show = args.Contains("--show");
             using var single = new Mutex(true, @"Local\fbtcal_single_instance", out bool first);
-            if (!first) return;
+            if (!first)
+            {
+                if (show) TrayApp.SignalShow();  // the running copy opens its window
+                return;
+            }
 
             Application.SetHighDpiMode(HighDpiMode.PerMonitorV2);
             Application.EnableVisualStyles();
@@ -77,7 +89,7 @@ namespace FbtCal
             bool changed = Setup.EnsureDriverRegistered(out string setup);
             Log.Info(setup);
             string note = changed ? "The SteamVR driver is set up. If SteamVR is already running, restart it once." : null;
-            Application.Run(new TrayApp(note));
+            Application.Run(new TrayApp(note, show));
             Log.Info("exit");
         }
 
@@ -85,8 +97,8 @@ namespace FbtCal
         // Exit code 0 = removed, 1 = not (cancelled, or SteamVR still running in --quiet mode).
         static int RunUninstall(Installer.Options o)
         {
-            const string Caption = "Uninstall fbtcal";
-            if (!o.Quiet && MessageBox.Show("Remove fbtcal from this PC?\n\nIts SteamVR driver and the start with SteamVR go too. " +
+            const string Caption = "Uninstall FBTcal";
+            if (!o.Quiet && MessageBox.Show("Remove FBTcal from this PC?\n\nIts SteamVR driver and the start with SteamVR go too. " +
                                             "Your pose and settings in %APPDATA%\\fbtcal are kept.",
                                             Caption, MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
                 return 1;
@@ -98,7 +110,7 @@ namespace FbtCal
                 if (o.Quiet || MessageBox.Show(notYet, Caption, MessageBoxButtons.RetryCancel, MessageBoxIcon.Warning) != DialogResult.Retry)
                     return 1;
             }
-            if (!o.Quiet) MessageBox.Show("fbtcal has been removed.", Caption, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (!o.Quiet) MessageBox.Show("FBTcal has been removed.", Caption, MessageBoxButtons.OK, MessageBoxIcon.Information);
             Installer.ScheduleSelfDelete();  // last: the exe is gone once this process has ended
             return 0;
         }
@@ -125,7 +137,7 @@ namespace FbtCal
             var slimePose = PoseMath.SlimeVrRestPose(body.Bones);
             // a "captured" pose: the same body standing a little wider, feet turned out
             var captured = PoseMath.AdjustPose(slimePose, 0.28, 13, null);
-            var normal = new PanelModel(WorkerState.Watching, "Watching", -1, -1, true, 6, 6, "", true, "16:41 · done",
+            var normal = new PanelModel(WorkerState.Watching, "Ready", -1, -1, true, 6, 6, "", true, "16:41 · done",
                                         PoseSource.Capture, "Oct 27, 16:40", "symmetrized 0.4° · 2.1 cm", "",
                                         28, false, "as captured", 28, 13, false, 13, 0, false,
                                         Points(captured), true, "", "");

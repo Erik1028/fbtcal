@@ -11,8 +11,9 @@
     <SelfContained>false</SelfContained>
     <AssemblyName>fbtcal</AssemblyName>
     <RootNamespace>FbtCal</RootNamespace>
-    <Version>1.0.1</Version>
-    <Product>fbtcal</Product>
+    <Version>1.1.0</Version>
+    <Product>FBTcal</Product>
+    <AssemblyTitle>FBTcal</AssemblyTitle>
     <Description>VRChat FBT calibration without posing</Description>
     <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
     <ApplicationIcon>res\fbtcal.ico</ApplicationIcon>

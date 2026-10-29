@@ -39,7 +39,10 @@ namespace FbtCal
         PosePoint[] Pose,        // the ideal pose in use, for the figure (same array until it changes)
         bool AutoStart,
         string PendingProblems,  // not empty: a capture waits for "save anyway" / "discard"
-        string Toast);
+        string Toast)
+    {
+        public bool OnDesktop { get; init; }  // drawn in the desktop window (MainWindow.cs), not the SteamVR tab
+    }
 
     // A tracker of the ideal pose in the HMD yaw frame (x right, y up, z back), metres.
     public readonly record struct PosePoint(string Part, float X, float Y, float Z);
@@ -48,7 +51,7 @@ namespace FbtCal
                               SourceCapture, SourceSlimeVr, ToeOutMinus, ToeOutPlus, ToeOutReset, ForwardMinus, ForwardPlus, ForwardReset,
                               OpenSettings, CloseSettings, CopyIkFlag }
 
-    // The fbtcal tab in SteamVR's dashboard: drawn with GDI+ (PanelDraw.cs) into one GPU texture
+    // The FBTcal tab in SteamVR's dashboard: drawn with GDI+ (PanelDraw.cs) into one GPU texture
     // (PanelTexture.cs), clicked with the laser in mouse mode. Lives on the VR thread like every other
     // OpenVR call. Orbit's dashboard tab is the model for the details
     // (2.5 m wide, mouse scale = pixels, mouse y counted from the bottom).
@@ -70,7 +73,7 @@ namespace FbtCal
         public string Create(CVROverlay ov, int adapterIndex)
         {
             ulong main = 0, thumb = 0;
-            var e = ov.CreateDashboardOverlay(Key, "fbtcal", ref main, ref thumb);
+            var e = ov.CreateDashboardOverlay(Key, "FBTcal", ref main, ref thumb);
             if (e != EVROverlayError.None) return "dashboard panel: " + e;
             _main = main;
             _thumb = thumb;

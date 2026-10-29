@@ -23,7 +23,7 @@ namespace FbtCal
             _o = o;
             SuspendLayout();  // laid out at 96 dpi, scaled to the screen (the designer's order)
             AutoScaleDimensions = new SizeF(96F, 96F);
-            Text = "fbtcal setup";
+            Text = "FBTcal setup";
             Icon = Res.TrayIcon("fbtcal.ico");
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = MinimizeBox = false;
@@ -35,7 +35,7 @@ namespace FbtCal
             ClientSize = new Size(560, 344);
 
             var pic = new PictureBox { Image = Res.Image("thumb.png"), SizeMode = PictureBoxSizeMode.Zoom, Bounds = new Rectangle(24, 28, 96, 96) };
-            var title = new Label { Text = "fbtcal " + Installer.Version, Font = UiFont(19f, semibold: true), AutoSize = true, Location = new Point(136, 30) };
+            var title = new Label { Text = "FBTcal " + Installer.Version, Font = UiFont(19f, semibold: true), AutoSize = true, Location = new Point(136, 30) };
             var tagline = new Label
             {
                 Text = "VRChat full-body calibration without standing up. Made for SlimeVR.",
@@ -118,9 +118,9 @@ namespace FbtCal
         void ShowPlan()
         {
             string installed = Installer.InstalledVersion();
-            _body.Text = (installed != null ? $"Updates fbtcal {installed} to {Installer.Version} in\n" : "Installs into\n") + _o.Dir +
+            _body.Text = (installed != null ? $"Updates FBTcal {installed} to {Installer.Version} in\n" : "Installs into\n") + _o.Dir +
                          "\nYour pose and settings (%APPDATA%\\fbtcal) are kept.";
-            _note.Text = Installer.DriverInUse(_o.Dir) ? "SteamVR is running with fbtcal's driver loaded: close SteamVR first." : "";
+            _note.Text = Installer.DriverInUse(_o.Dir) ? "SteamVR is running with FBTcal's driver loaded: close SteamVR first." : "";
             _primary.Text = installed != null ? "Update" : "Install";
         }
 
@@ -134,8 +134,8 @@ namespace FbtCal
             {
                 Installer.Install(_o);
                 _done = true;
-                _body.Text = "fbtcal is installed and starts together with SteamVR from now on.\n" +
-                             "In VR: open the SteamVR dashboard and look for the fbtcal tab.";
+                _body.Text = "FBTcal is installed and starts together with SteamVR from now on.\n" +
+                             "In VR: open the SteamVR dashboard and look for the FBTcal tab.";
                 _note.Text = Installer.SteamVRRunning() ? "SteamVR is running: restart it once to load the driver." : "";
                 _primary.Text = "Done";
                 _secondary.Visible = _desktop.Visible = false;

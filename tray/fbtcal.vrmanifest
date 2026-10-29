@@ -8,7 +8,7 @@
       "is_dashboard_overlay": true,
       "strings": {
         "en_us": {
-          "name": "fbtcal",
+          "name": "FBTcal",
           "description": "VRChat FBT calibration without posing"
         }
       }

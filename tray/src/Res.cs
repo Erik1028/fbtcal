@@ -18,6 +18,13 @@ namespace FbtCal
             return new Icon(s, SystemInformation.SmallIconSize);
         }
 
+        // A window's icon with every size in the file: Windows picks the title bar's and Alt+Tab's.
+        public static Icon WindowIcon(string name)
+        {
+            using var s = Open(name);
+            return new Icon(s);
+        }
+
         public static Bitmap Image(string name)
         {
             using var s = Open(name);

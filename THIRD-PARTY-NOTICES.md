@@ -1,6 +1,6 @@
 # Third-party notices
 
-fbtcal includes or links the following. Their full license texts are in the files named here.
+FBTcal includes or links the following. Their full license texts are in the files named here.
 
 | Part | Used for | License |
 |---|---|---|
@@ -10,6 +10,6 @@ fbtcal includes or links the following. Their full license texts are in the file
 | [SharpGen.Runtime](https://github.com/SharpGenTools/SharpGenTools), (c) 2010-2017 Alexandre Mutel, 2017-2023 Jeremy Koritzinsky, 2023-2024 Amer Koleci | used by Vortice | MIT |
 | [.NET](https://github.com/dotnet/runtime) runtime and Windows Forms, Copyright (c) .NET Foundation and Contributors | the app; `fbtcalSetup.exe` carries the runtime | MIT |
 
-fbtcal reads, but does not include, files of [SlimeVR](https://github.com/SlimeVR/SlimeVR-Server)
-(the body proportions in `%APPDATA%\dev.slimevr.SlimeVR`). The SlimeVR tracker drawn in fbtcal's icon is
-an illustration of the hardware fbtcal is made for. fbtcal is not affiliated with SlimeVR, VRChat or Valve.
+FBTcal reads, but does not include, files of [SlimeVR](https://github.com/SlimeVR/SlimeVR-Server)
+(the body proportions in `%APPDATA%\dev.slimevr.SlimeVR`). The SlimeVR tracker drawn in FBTcal's icon is
+an illustration of the hardware FBTcal is made for. FBTcal is not affiliated with SlimeVR, VRChat or Valve.
