@@ -1,0 +1,54 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>false</SelfContained>
+    <AssemblyName>fbtcal</AssemblyName>
+    <RootNamespace>FbtCal</RootNamespace>
+    <Version>1.0.0</Version>
+    <Product>fbtcal</Product>
+    <Description>VRChat FBT calibration without posing</Description>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <ApplicationIcon>res\fbtcal.ico</ApplicationIcon>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <!-- openvr_api.cs is Valve's generated binding: its warnings are not ours -->
+    <NoWarn>$(NoWarn);CS0649;CS0169;CA1416;CS8981</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- icons and panel pictures (art\make_icons.py), read by Res.cs -->
+    <EmbeddedResource Include="res\*.ico;res\*.png" LogicalName="%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <!-- build_setup.ps1: the installer carries the driver and the files next to the exe (Installer.cs).
+       Its own symbol makes the compiler re-run when switching between this and a dev build, so a dev
+       build never keeps a stale payload in obj\ (and the other way round). -->
+  <PropertyGroup Condition="'$(FbtcalPayload)' == 'true'">
+    <DefineConstants>$(DefineConstants);FBTCAL_PAYLOAD</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup Condition="'$(FbtcalPayload)' == 'true'">
+    <EmbeddedResource Include="..\driver\fbtcal\driver.vrdrivermanifest" LogicalName="payload/driver/fbtcal/driver.vrdrivermanifest" />
+    <EmbeddedResource Include="..\driver\fbtcal\bin\win64\driver_fbtcal.dll" LogicalName="payload/driver/fbtcal/bin/win64/driver_fbtcal.dll" />
+    <EmbeddedResource Include="..\third_party\openvr\csharp\openvr_api.dll" LogicalName="payload/openvr_api.dll" />
+    <EmbeddedResource Include="fbtcal.vrmanifest" LogicalName="payload/fbtcal.vrmanifest" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- the panel's GPU texture (PanelTexture.cs), same package and version as Orbit -->
+    <PackageReference Include="Vortice.Direct3D11" Version="3.8.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\third_party\openvr\csharp\openvr_api.cs" Link="third_party\openvr_api.cs" />
+    <Compile Remove="tests\**" />
+    <None Include="..\third_party\openvr\csharp\openvr_api.dll" Link="openvr_api.dll" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+    <None Include="fbtcal.vrmanifest" CopyToOutputDirectory="PreserveNewest" ExcludeFromSingleFile="true" />
+  </ItemGroup>
+
+</Project>

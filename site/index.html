@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>fbtcal · VRChat full-body calibration without standing up</title>
+<meta name="description" content="Calibrate full-body tracking in VRChat from bed, a chair or wherever you are. While VRChat calibrates, fbtcal shows it your SlimeVR trackers as if you stood straight under your headset.">
+<link rel="canonical" href="https://erik1028.github.io/fbtcal/">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Erik1028">
+<meta property="og:url" content="https://erik1028.github.io/fbtcal/">
+<meta property="og:title" content="fbtcal">
+<meta property="og:description" content="VRChat full-body calibration without standing up. Made for SlimeVR.">
+<meta property="og:image" content="https://erik1028.github.io/fbtcal/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#0e0e10">
+<script type="application/ld+json">{"@context": "https://schema.org", "@type": "SoftwareApplication", "name": "fbtcal", "url": "https://erik1028.github.io/fbtcal/", "description": "VRChat full-body calibration without standing up: while VRChat calibrates, fbtcal shows it your SlimeVR trackers as if you stood straight under your headset.", "image": "https://erik1028.github.io/fbtcal/og.png", "operatingSystem": "Windows 10, Windows 11", "applicationCategory": "UtilitiesApplication", "downloadUrl": "https://github.com/Erik1028/fbtcal/releases/latest", "isAccessibleForFree": true, "inLanguage": "en", "license": "https://opensource.org/licenses/MIT", "offers": {"@type": "Offer", "price": "0", "priceCurrency": "USD"}, "author": {"@type": "Person", "name": "Erik1028", "url": "https://github.com/Erik1028"}, "sameAs": ["https://github.com/Erik1028/fbtcal"]}</script>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-repo="Erik1028/fbtcal">
+
+<header class="top">
+<div class="wrap">
+<a class="logo" href="#top"><img src="img/icon-256.png" width="34" height="34" alt="">fbtcal</a>
+<nav aria-label="Sections"><a class="opt" href="#how">How it works</a><a class="opt" href="#slimevr">SlimeVR</a><a href="#install">Download</a><a class="opt" href="https://github.com/Erik1028/fbtcal">GitHub</a></nav>
+</div>
+</header>
+
+<main>
+<section class="intro wrap" id="top">
+<div class="pitch">
+<h1>Calibrate full-body tracking without standing up.</h1>
+<p>VRChat calibrates from the pose you are in when you pull the triggers, so it wants you standing straight.
+fbtcal takes care of that moment: while VRChat calibrates, it shows VRChat your trackers as if you stood
+under your headset. From bed, from a chair, from wherever you are.</p>
+<div class="get">
+<a class="btn" href="https://github.com/Erik1028/fbtcal/releases/latest/download/fbtcalSetup.exe" data-asset="^fbtcalSetup\.exe$"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12M6 10l6 6 6-6M4 21h16"/></svg>Download fbtcalSetup.exe</a>
+<span class="mono" id="ver">v1.0.0 · 29 Oct 2026</span>
+</div>
+<p class="fine">Made for <a href="https://slimevr.dev/">SlimeVR</a>. Windows 10 and 11, SteamVR. Free and open source.</p>
+</div>
+<figure class="hero">
+<img src="img/panel-main.webp" width="1024" height="640" alt="The fbtcal tab in the SteamVR dashboard: status on the left, the standing pose VRChat will see in the middle, the pose source and settings on the right.">
+<figcaption>The fbtcal tab in the SteamVR dashboard.</figcaption>
+</figure>
+</section>
+
+<section class="how wrap" id="how">
+<h2>How it works</h2>
+<figure class="scene" aria-label="On the left, a person lying in bed wearing a headset and six trackers. On the right, the same six trackers standing upright under the headset: what VRChat sees while it calibrates.">
+<svg viewBox="0 0 960 380" role="img" aria-hidden="true">
+<defs><pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse"><circle cx="3" cy="3" r=".9" fill="#2a2a30"/></pattern></defs>
+<!-- you: lying in bed -->
+<rect x="40" y="268" width="390" height="34" rx="9" fill="#1e1e23"/>
+<rect x="40" y="268" width="390" height="34" rx="9" fill="url(#hatch)"/>
+<rect x="52" y="244" width="86" height="28" rx="13" fill="#2a2a30"/>
+<g stroke="#5e5e67" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<polyline points="112,240 168,246 232,250"/><polyline points="232,250 306,232 384,252"/></g>
+<circle cx="95" cy="234" r="19" fill="#e4e4e8"/>
+<rect x="81" y="199" width="28" height="19" rx="5" fill="#e4e4e8"/><line x1="81" y1="212" x2="109" y2="212" stroke="#0e0e10" stroke-width="2.5"/>
+<g fill="#a743e8" stroke="#0e0e10" stroke-width="3.5"><circle cx="168" cy="246" r="10"/><circle cx="232" cy="250" r="10"/><circle cx="306" cy="232" r="10"/><circle cx="384" cy="252" r="10"/></g>
+<!-- the step between -->
+<g stroke="#55555f" stroke-width="2.5" stroke-linecap="round" fill="none"><line x1="470" y1="220" x2="548" y2="220" stroke-dasharray="6 7"/><polyline points="540,210 552,220 540,230"/></g>
+<!-- what VRChat sees -->
+<line x1="600" y1="338" x2="900" y2="338" stroke="#3a3a41" stroke-width="2"/>
+<line x1="750" y1="80" x2="750" y2="320" stroke="#55555f" stroke-width="2" stroke-dasharray="6 6"/>
+<g stroke="#5e5e67" stroke-width="7" stroke-linecap="round" stroke-linejoin="round" fill="none">
+<polyline points="750,62 750,110 750,180"/><polyline points="750,180 728,250 722,322"/><polyline points="750,180 772,250 778,322"/></g>
+<circle cx="750" cy="56" r="19" fill="#e4e4e8"/><rect x="734" y="48" width="32" height="13" rx="6" fill="#0e0e10"/><rect x="737" y="51" width="26" height="7" rx="3.5" fill="#55555d"/>
+<g fill="#a743e8" stroke="#0e0e10" stroke-width="3.5"><circle cx="750" cy="110" r="10"/><circle cx="750" cy="180" r="10"/><circle cx="728" cy="250" r="10"/><circle cx="772" cy="250" r="10"/><circle cx="722" cy="322" r="10"/><circle cx="778" cy="322" r="10"/></g>
+<g fill="none" stroke="#a743e8" stroke-width="2"><circle cx="750" cy="110" r="17"/><circle cx="750" cy="180" r="17"/><circle cx="728" cy="250" r="17"/><circle cx="772" cy="250" r="17"/><circle cx="722" cy="322" r="17"/><circle cx="778" cy="322" r="17"/></g>
+</svg>
+<figcaption><span>You, lying in bed</span><span>What VRChat sees while it calibrates</span></figcaption>
+</figure>
+<ol class="steps">
+<li><b>Open <i>Calibrate FBT</i> in VRChat</b>, the way you always do.</li>
+<li><b>fbtcal notices it</b> in VRChat's log and holds your trackers in a standing pose, hung under your headset and turned the way you face.</li>
+<li><b>Pull both triggers.</b> The moment VRChat has taken the calibration, your trackers follow you again.</li>
+</ol>
+</section>
+
+<section class="features wrap" id="features">
+<article>
+<figure><img src="img/panel-slimevr.webp" width="1024" height="640" loading="lazy" alt="The pose source switch set to SlimeVR: the standing pose from the SlimeVR body proportions."></figure>
+<div><h3>No standing up at all</h3>
+<p>The standing pose can come straight from your <b>SlimeVR body proportions</b>, the ones the SlimeVR server already
+knows. Or stand up once, right after a full reset, and let fbtcal capture your own. One switch, and your capture
+stays when you try the other.</p></div>
+</article>
+<article>
+<figure><img src="img/panel-settings.webp" width="1024" height="640" loading="lazy" alt="Pose settings: stance, toe-out and feet forward or back, a front view and the feet from above."></figure>
+<div><h3>Fine-tune the pose</h3>
+<p>How far apart your feet are, how much they turn out, and whether they stand a little forward or back. The
+feet seen from above show each change against the original. Start a 20-second <b>Test</b> and adjust while
+your trackers hold the pose.</p></div>
+</article>
+<article>
+<figure><img src="img/panel-problems.webp" width="1024" height="640" loading="lazy" alt="Two problems: a missing knee tracker shown on a small figure, and the missing VRChat launch option with a Copy button."></figure>
+<div><h3>Says what's wrong, and the fix</h3>
+<p>A driver that isn't loaded, a tracker SteamVR can't see, VRChat's log without the calibration lines: the tab
+names the problem in amber and the steps to fix it, down to a <b>Copy</b> button for the launch option.</p></div>
+</article>
+<article>
+<figure><img src="img/panel-calibrating.webp" width="1024" height="640" loading="lazy" alt="While VRChat calibrates: Pull both triggers, with the held standing pose on the right."></figure>
+<div><h3>Out of the way the rest of the time</h3>
+<p>fbtcal starts together with SteamVR and sits in the tray. It only touches your trackers while VRChat
+calibrates or while you test, and if it ever stops, everything is real again at once.</p></div>
+</article>
+</section>
+
+<section class="slimevr wrap" id="slimevr">
+<h2>Made for SlimeVR</h2>
+<div class="cols">
+<p>fbtcal is built and tested with <a href="https://slimevr.dev/">SlimeVR</a> IMU trackers and the trackers the
+SlimeVR server gives SteamVR: chest, waist, knees and feet. With IMU trackers, VRChat's calibration pose matters
+even more, because their positions come from the skeleton, not from a camera.</p>
+<ul>
+<li><b>SlimeVR proportions</b> needs SlimeVR server v22 or later.</li>
+<li>A <b>captured</b> pose works with any SlimeVR version.</li>
+<li>Lighthouse and other trackers may work with a captured pose; nobody has tested that yet.</li>
+</ul>
+</div>
+</section>
+
+<section class="install wrap" id="install">
+<h2>Install</h2>
+<ol class="steps">
+<li><b>Run <a href="https://github.com/Erik1028/fbtcal/releases/latest/download/fbtcalSetup.exe" data-asset="^fbtcalSetup\.exe$">fbtcalSetup.exe</a></b><span class="size"> (64 MB)</span>.
+It installs for your Windows user only, with everything it needs built in.</li>
+<li><b>Add a VRChat launch option.</b> fbtcal reads VRChat's log to know when it calibrates. In Steam: VRChat ›
+Properties › Launch options, add
+<span class="code"><code id="flag">--enable-ik-debug-logging</code><button type="button" data-copy="flag">Copy</button></span></li>
+<li><b>Start SteamVR.</b> If it says a new add-on was found, allow fbtcal. The <b>fbtcal</b> tab in the dashboard
+shows whether everything is ready.</li>
+<li><b>Pick the standing pose:</b> SlimeVR, or <i>Capture standing pose</i> once.</li>
+<li><b>Calibrate in VRChat</b> from wherever you are.</li>
+</ol>
+</section>
+
+<section class="notes wrap" id="notes">
+<h2>Good to know</h2>
+<ul>
+<li>Only VRChat is noticed automatically. In other games, <i>Test</i> gives you 20 seconds of the standing pose to calibrate in.</li>
+<li>VRChat keeps a calibration across avatar switches, not across restarts: calibrate once per session.</li>
+<li>fbtcal fixes the <b>pose</b> VRChat calibrates from, not your trackers' rotations. If a leg is twisted even when you stand, do a SlimeVR mounting reset first.</li>
+<li>fbtcal 1.0 is new. Standing and reclined calibrations are tested; if lying flat on your back gives you trouble, please <a href="https://github.com/Erik1028/fbtcal/issues">open an issue</a> with your <span class="mono">%APPDATA%\fbtcal\fbtcal.log</span>.</li>
+<li>Uninstall from Windows Settings › Apps. It takes the SteamVR driver and the start with SteamVR with it and keeps your settings.</li>
+</ul>
+</section>
+</main>
+
+<footer>
+<div class="wrap">
+<span>fbtcal · MIT license · not affiliated with SlimeVR, VRChat or Valve</span>
+<span><a href="https://erik1028.github.io/">More apps</a> · <a href="https://github.com/Erik1028/fbtcal">Source</a> · <a href="https://github.com/Erik1028/fbtcal/releases">Releases</a></span>
+</div>
+</footer>
+<script src="site.js"></script>
+</body>
+</html>

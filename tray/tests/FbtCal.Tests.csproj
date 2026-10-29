@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Console checks for the parts that need no SteamVR. Run: dotnet run -c Release (see Tests.cs). -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>disable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <PlatformTarget>x64</PlatformTarget>
+    <RootNamespace>FbtCal.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="..\src\PoseMath.cs" Link="src\PoseMath.cs" />
+    <Compile Include="..\src\SlimeVr.cs" Link="src\SlimeVr.cs" />
+    <Compile Include="..\src\Storage.cs" Link="src\Storage.cs" />
+    <Compile Include="..\src\VrcLogWatcher.cs" Link="src\VrcLogWatcher.cs" />
+    <Compile Include="..\src\OverrideWriter.cs" Link="src\OverrideWriter.cs" />
+  </ItemGroup>
+
+</Project>

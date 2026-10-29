@@ -1,0 +1,17 @@
+{
+  "source": "builtin",
+  "applications": [
+    {
+      "app_key": "erik.fbtcal",
+      "launch_type": "binary",
+      "binary_path_windows": "fbtcal.exe",
+      "is_dashboard_overlay": true,
+      "strings": {
+        "en_us": {
+          "name": "fbtcal",
+          "description": "VRChat FBT calibration without posing"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120">
+  <defs>
+    <linearGradient id="case" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#D9A6FF"/><stop offset=".5" stop-color="#A743E8"/><stop offset="1" stop-color="#6B1DA6"/>
+    </linearGradient>
+    <linearGradient id="strap" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2B2B2E"/><stop offset=".5" stop-color="#18181A"/><stop offset="1" stop-color="#0E0E10"/>
+    </linearGradient>
+    <pattern id="velcro" width="3" height="3" patternUnits="userSpaceOnUse">
+      <circle cx="1.5" cy="1.5" r=".7" fill="#fff" fill-opacity=".09"/>
+    </pattern>
+  </defs>
+  <g transform="">
+  <rect x="3" y="47" width="114" height="36" rx="7" fill="url(#strap)"/>
+    <rect x="3" y="47" width="114" height="36" rx="7" fill="url(#velcro)"/>
+  <path d="M29 47 C29 31 43 25 60 25 C77 25 91 31 91 47 L91 83 Q91 94 80 94 L40 94 Q29 94 29 83 Z" transform="translate(0 3)" fill="#000" fill-opacity=".28"/>
+  <path d="M29 47 C29 31 43 25 60 25 C77 25 91 31 91 47 L91 83 Q91 94 80 94 L40 94 Q29 94 29 83 Z" fill="url(#case)" fill-opacity=".93" stroke="#6B1DA6" stroke-width="2.4"/>
+  <rect x="37" y="37" width="46" height="46" rx="6" fill="#7E2BB8" fill-opacity=".55"/>
+  <path d="M62 44 h4 v-4 h4 v4 h4 v-4 h4" stroke="#F3D9FF" stroke-opacity=".8" stroke-width="1.6" fill="none"/>
+  <rect x="61" y="50" width="17" height="17" rx="2" fill="#F1DEFA" fill-opacity=".85"/>
+  <rect x="64" y="53" width="11" height="11" rx="1.5" fill="none" stroke="#7E2BB8" stroke-opacity=".5" stroke-width="1"/>
+  <rect x="44" y="54" width="8" height="8" rx="1.2" fill="#2A1438" fill-opacity=".8"/>
+  <g fill="#F3D9FF" fill-opacity=".7"><circle cx="41" cy="45" r="1.2"/><circle cx="41" cy="50" r="1.2"/>
+    <circle cx="41" cy="55" r="1.2"/><circle cx="41" cy="60" r="1.2"/><circle cx="41" cy="65" r="1.2"/></g>
+  <rect x="45" y="71" width="9" height="5" rx="1" fill="#2A1438" fill-opacity=".7"/>
+  <path d="M48 26.5 v6 M60 25.2 v6.5 M72 26.5 v6" stroke="#6B1DA6" stroke-width="2.4" stroke-linecap="round"/>
+  <rect x="53" y="86" width="14" height="5" rx="2.5" fill="#2A1438" fill-opacity=".75"/>
+  <ellipse cx="45" cy="38" rx="11" ry="6" fill="#fff" fill-opacity=".38" transform="rotate(-25 45 38)"/>
+  </g>
+</svg>

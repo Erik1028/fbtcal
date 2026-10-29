@@ -1,0 +1,16 @@
+__pycache__/
+*.pyc
+driver/build/
+driver/fbtcal/bin/
+dist/
+tray/bin/
+tray/obj/
+tray/tests/bin/
+tray/tests/obj/
+release/
+art/out/
+
+# private notes, kept out of the public repository
+CLAUDE.md
+docs/
+proto/
